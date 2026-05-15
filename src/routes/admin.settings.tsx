@@ -5,6 +5,7 @@ import type { Settings } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { LocalizedInput } from "@/components/admin/LocalizedInput";
+import { CloudinaryUpload } from "@/components/admin/CloudinaryUpload";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -36,9 +37,9 @@ function SettingsAdmin() {
           <div className="space-y-4">
             <LocalizedInput label="Site title" value={data.siteTitle} onChange={(v) => setData({ ...data, siteTitle: v })} />
             <LocalizedInput label="SEO description" value={data.seoDescription} onChange={(v) => setData({ ...data, seoDescription: v })} multiline />
-            <div className="space-y-2"><Label>Logo URL</Label><Input value={data.siteLogo} onChange={(e) => setData({ ...data, siteLogo: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Profile image URL</Label><Input value={data.profileImage} onChange={(e) => setData({ ...data, profileImage: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Resume / CV URL</Label><Input value={data.resumeUrl} onChange={(e) => setData({ ...data, resumeUrl: e.target.value })} /></div>
+            <CloudinaryUpload label="Logo" value={data.siteLogo} onChange={(v) => setData({ ...data, siteLogo: v })} />
+            <CloudinaryUpload label="Profile image" value={data.profileImage} onChange={(v) => setData({ ...data, profileImage: v })} />
+            <CloudinaryUpload label="Resume / CV (PDF)" value={data.resumeUrl} onChange={(v) => setData({ ...data, resumeUrl: v })} kind="raw" accept="application/pdf,.pdf,.doc,.docx" preview="file" />
           </div>
         </div>
 
