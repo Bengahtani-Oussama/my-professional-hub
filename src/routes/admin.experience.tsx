@@ -6,6 +6,7 @@ import { emptyLocalized, emptyLocalizedArray } from "@/lib/types";
 import { useI18n } from "@/lib/i18n";
 import { PageHeader } from "@/components/admin/PageHeader";
 import { LocalizedInput, LocalizedListInput } from "@/components/admin/LocalizedInput";
+import { CloudinaryUpload, CloudinaryGallery } from "@/components/admin/CloudinaryUpload";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -122,13 +123,14 @@ function ExperienceAdmin() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2"><Label>Start</Label><Input type="month" value={editing.startDate ?? ""} onChange={(e) => setEditing({ ...editing, startDate: e.target.value })} /></div>
                 <div className="space-y-2"><Label>End</Label><Input type="month" value={editing.endDate ?? ""} onChange={(e) => setEditing({ ...editing, endDate: e.target.value })} /></div>
-                <div className="space-y-2"><Label>Image URL</Label><Input value={editing.imageUrl} onChange={(e) => setEditing({ ...editing, imageUrl: e.target.value })} /></div>
+                <div className="sm:col-span-2"><CloudinaryUpload label="Cover image" value={editing.imageUrl} onChange={(v) => setEditing({ ...editing, imageUrl: v })} /></div>
                 <div className="space-y-2"><Label>Tags (comma)</Label><Input value={editing.tags.join(", ")} onChange={(e) => setEditing({ ...editing, tags: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
                 <div className="space-y-2"><Label>Stack (comma)</Label><Input value={editing.stack.join(", ")} onChange={(e) => setEditing({ ...editing, stack: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
                 <div className="space-y-2"><Label>Skills (comma)</Label><Input value={editing.skills.join(", ")} onChange={(e) => setEditing({ ...editing, skills: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} /></div>
                 <div className="space-y-2"><Label>Repo URL</Label><Input value={editing.repoUrl ?? ""} onChange={(e) => setEditing({ ...editing, repoUrl: e.target.value })} /></div>
                 <div className="space-y-2"><Label>Live URL</Label><Input value={editing.liveUrl ?? ""} onChange={(e) => setEditing({ ...editing, liveUrl: e.target.value })} /></div>
               </div>
+              <CloudinaryGallery label="Gallery images" value={editing.images} onChange={(v) => setEditing({ ...editing, images: v })} />
               <div className="flex gap-6 pt-2">
                 <label className="flex items-center gap-2 text-sm"><Switch checked={editing.featured} onCheckedChange={(v) => setEditing({ ...editing, featured: v })} /> Featured</label>
                 <label className="flex items-center gap-2 text-sm"><Switch checked={!!editing.current} onCheckedChange={(v) => setEditing({ ...editing, current: v })} /> Current role</label>
