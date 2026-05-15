@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminExperienceRouteImport } from './routes/admin.experience'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -34,16 +35,23 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminExperienceRoute = AdminExperienceRouteImport.update({
+  id: '/experience',
+  path: '/experience',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/experience': typeof AdminExperienceRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/admin/experience': typeof AdminExperienceRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -51,14 +59,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
+  '/admin/experience': typeof AdminExperienceRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/login' | '/admin/'
+  fullPaths: '/' | '/admin' | '/login' | '/admin/experience' | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/admin'
-  id: '__root__' | '/' | '/admin' | '/login' | '/admin/'
+  to: '/' | '/login' | '/admin/experience' | '/admin'
+  id: '__root__' | '/' | '/admin' | '/login' | '/admin/experience' | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,14 +106,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/experience': {
+      id: '/admin/experience'
+      path: '/experience'
+      fullPath: '/admin/experience'
+      preLoaderRoute: typeof AdminExperienceRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
 interface AdminRouteChildren {
+  AdminExperienceRoute: typeof AdminExperienceRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminExperienceRoute: AdminExperienceRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
