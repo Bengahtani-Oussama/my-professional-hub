@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Section } from "./Section";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateApiError } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +35,7 @@ export function ContactSection({ settings }: { settings: Settings }) {
       },
       onError: (err) => {
         setFieldErrors(err.fieldErrors);
-        toast.error(err.message);
+        toast.error(translateApiError(err, t));
       },
     },
   );
