@@ -25,20 +25,119 @@ export const api = {
   },
 };
 
+/* --------------------------- Typed API errors -------------------------- */
+
+export type FieldErrors = Record<string, string>;
+
+/**
+ * Normalised error thrown by every request. `.message` is always a
+ * human-friendly sentence safe to show in a toast or alert. `.fieldErrors`
+ * is populated when the backend returned per-field validation errors
+ * (zod / mongoose style), keyed by field path.
+ */
+export class ApiError extends Error {
+  status: number;
+  fieldErrors: FieldErrors;
+  isNetwork: boolean;
+  raw?: unknown;
+  constructor(opts: {
+    message: string;
+    status?: number;
+    fieldErrors?: FieldErrors;
+    isNetwork?: boolean;
+    raw?: unknown;
+  }) {
+    super(opts.message);
+    this.name = "ApiError";
+    this.status = opts.status ?? 0;
+    this.fieldErrors = opts.fieldErrors ?? {};
+    this.isNetwork = Boolean(opts.isNetwork);
+    this.raw = opts.raw;
+  }
+}
+
+function friendlyFor(status: number, fallback?: string): string {
+  switch (status) {
+    case 400: return fallback || "Some fields are invalid. Please review and try again.";
+    case 401: return "Your session has expired. Please sign in again.";
+    case 403: return "You don't have permission to do that.";
+    case 404: return "We couldn't find what you were looking for.";
+    case 409: return fallback || "That conflicts with existing data.";
+    case 413: return "The file is too large. Please upload a smaller one.";
+    case 422: return fallback || "Some fields are invalid. Please review and try again.";
+    case 429: return "Too many requests. Please slow down and try again in a moment.";
+    case 500: case 502: case 503: case 504:
+      return "Our server is having trouble right now. Please try again shortly.";
+    default: return fallback || "Something went wrong. Please try again.";
+  }
+}
+
+function extractFieldErrors(body: unknown): FieldErrors {
+  if (!body || typeof body !== "object") return {};
+  const out: FieldErrors = {};
+  const b = body as Record<string, unknown>;
+  // { errors: [{ path: ["email"], message: "..." }, ...] }  — zod-style
+  if (Array.isArray(b.errors)) {
+    for (const e of b.errors as Array<Record<string, unknown>>) {
+      const path = Array.isArray(e.path) ? (e.path as Array<string | number>).join(".") : (e.path as string | undefined) ?? (e.field as string | undefined);
+      const msg = (e.message as string | undefined) ?? "Invalid value";
+      if (path && !out[path]) out[path] = msg;
+    }
+  }
+  // { errors: { email: "...", name: "..." } }
+  if (b.errors && !Array.isArray(b.errors) && typeof b.errors === "object") {
+    for (const [k, v] of Object.entries(b.errors as Record<string, unknown>)) {
+      if (typeof v === "string") out[k] = v;
+      else if (v && typeof v === "object" && "message" in (v as object)) {
+        out[k] = String((v as { message: unknown }).message);
+      }
+    }
+  }
+  return out;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = api.getToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+  } catch (e) {
+    throw new ApiError({
+      message: "Couldn't reach the server. Check your internet connection and try again.",
+      isNetwork: true,
+      raw: e,
+    });
   }
+  if (!res.ok) {
+    let body: unknown = null;
+    let serverMsg: string | undefined;
+    const text = await res.text();
+    if (text) {
+      try {
+        body = JSON.parse(text);
+        const b = body as Record<string, unknown>;
+        serverMsg = (b.message as string | undefined) ?? (b.error as string | undefined);
+      } catch {
+        serverMsg = text;
+      }
+    }
+    if (res.status === 401) api.setToken(null);
+    throw new ApiError({
+      status: res.status,
+      message: friendlyFor(res.status, serverMsg),
+      fieldErrors: extractFieldErrors(body),
+      raw: body ?? text,
+    });
+  }
+  // 204 No Content
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
