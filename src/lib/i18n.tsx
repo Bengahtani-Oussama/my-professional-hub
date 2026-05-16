@@ -6,6 +6,8 @@ import {
   type ReactNode,
 } from "react";
 import type { Locale, LocalizedString, LocalizedArray } from "./types";
+import { setTranslator } from "./i18n-runtime";
+export { translateApiError } from "./i18n-runtime";
 
 type Dict = Record<string, string>;
 
@@ -67,6 +69,18 @@ const en: Dict = {
   "login.password": "Password",
   "login.submit": "Sign in",
   "login.failed": "Invalid credentials",
+  "errors.network": "Couldn't reach the server. Check your internet connection and try again.",
+  "errors.validation": "Some fields are invalid. Please review and try again.",
+  "errors.unauthorized": "Your session has expired. Please sign in again.",
+  "errors.forbidden": "You don't have permission to do that.",
+  "errors.notFound": "We couldn't find what you were looking for.",
+  "errors.conflict": "That conflicts with existing data.",
+  "errors.tooLarge": "The file is too large. Please upload a smaller one.",
+  "errors.rateLimited": "Too many requests. Please slow down and try again in a moment.",
+  "errors.server": "Our server is having trouble right now. Please try again shortly.",
+  "errors.generic": "Something went wrong. Please try again.",
+  "errors.title": "Couldn't load this section",
+  "errors.retry": "Retry",
 };
 
 const fr: Dict = {
@@ -127,6 +141,18 @@ const fr: Dict = {
   "login.password": "Mot de passe",
   "login.submit": "Se connecter",
   "login.failed": "Identifiants invalides",
+  "errors.network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+  "errors.validation": "Certains champs sont invalides. Veuillez vérifier et réessayer.",
+  "errors.unauthorized": "Votre session a expiré. Veuillez vous reconnecter.",
+  "errors.forbidden": "Vous n'avez pas la permission d'effectuer cette action.",
+  "errors.notFound": "Nous n'avons pas trouvé ce que vous cherchiez.",
+  "errors.conflict": "Cela entre en conflit avec des données existantes.",
+  "errors.tooLarge": "Le fichier est trop volumineux. Veuillez en téléverser un plus petit.",
+  "errors.rateLimited": "Trop de requêtes. Veuillez ralentir et réessayer dans un instant.",
+  "errors.server": "Notre serveur rencontre un problème. Veuillez réessayer sous peu.",
+  "errors.generic": "Une erreur est survenue. Veuillez réessayer.",
+  "errors.title": "Impossible de charger cette section",
+  "errors.retry": "Réessayer",
 };
 
 const ar: Dict = {
@@ -187,6 +213,18 @@ const ar: Dict = {
   "login.password": "كلمة المرور",
   "login.submit": "تسجيل الدخول",
   "login.failed": "بيانات غير صحيحة",
+  "errors.network": "تعذّر الوصول إلى الخادم. تحقّق من اتصالك بالإنترنت وحاول مجددًا.",
+  "errors.validation": "بعض الحقول غير صالحة. يرجى المراجعة والمحاولة مجددًا.",
+  "errors.unauthorized": "انتهت جلستك. يرجى تسجيل الدخول مجددًا.",
+  "errors.forbidden": "ليست لديك صلاحية للقيام بذلك.",
+  "errors.notFound": "لم نعثر على ما تبحث عنه.",
+  "errors.conflict": "هذا يتعارض مع بيانات موجودة.",
+  "errors.tooLarge": "حجم الملف كبير جدًا. يرجى رفع ملف أصغر.",
+  "errors.rateLimited": "طلبات كثيرة جدًا. يرجى التمهّل والمحاولة بعد لحظات.",
+  "errors.server": "يواجه الخادم مشكلة حاليًا. يرجى المحاولة بعد قليل.",
+  "errors.generic": "حدث خطأ ما. يرجى المحاولة مجددًا.",
+  "errors.title": "تعذّر تحميل هذا القسم",
+  "errors.retry": "إعادة المحاولة",
 };
 
 const dicts: Record<Locale, Dict> = {
@@ -226,6 +264,12 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string) => dicts[locale]?.[key] ?? dicts.en[key] ?? key;
+
+  // Expose the active translator to non-React modules (e.g. toast helpers).
+  useEffect(() => {
+    setTranslator(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale]);
 
   const pickLocalized = (v?: LocalizedString) => {
     if (!v) return "";
