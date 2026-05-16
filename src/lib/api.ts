@@ -39,12 +39,15 @@ export class ApiError extends Error {
   status: number;
   fieldErrors: FieldErrors;
   isNetwork: boolean;
+  /** Translation key for the friendly message — pair with `translateApiError`. */
+  i18nKey: string;
   raw?: unknown;
   constructor(opts: {
     message: string;
     status?: number;
     fieldErrors?: FieldErrors;
     isNetwork?: boolean;
+    i18nKey?: string;
     raw?: unknown;
   }) {
     super(opts.message);
@@ -52,23 +55,24 @@ export class ApiError extends Error {
     this.status = opts.status ?? 0;
     this.fieldErrors = opts.fieldErrors ?? {};
     this.isNetwork = Boolean(opts.isNetwork);
+    this.i18nKey = opts.i18nKey ?? "errors.generic";
     this.raw = opts.raw;
   }
 }
 
-function friendlyFor(status: number, fallback?: string): string {
+function friendlyFor(status: number, fallback?: string): { message: string; i18nKey: string } {
   switch (status) {
-    case 400: return fallback || "Some fields are invalid. Please review and try again.";
-    case 401: return "Your session has expired. Please sign in again.";
-    case 403: return "You don't have permission to do that.";
-    case 404: return "We couldn't find what you were looking for.";
-    case 409: return fallback || "That conflicts with existing data.";
-    case 413: return "The file is too large. Please upload a smaller one.";
-    case 422: return fallback || "Some fields are invalid. Please review and try again.";
-    case 429: return "Too many requests. Please slow down and try again in a moment.";
+    case 400: return { i18nKey: "errors.validation", message: fallback || "Some fields are invalid. Please review and try again." };
+    case 401: return { i18nKey: "errors.unauthorized", message: "Your session has expired. Please sign in again." };
+    case 403: return { i18nKey: "errors.forbidden", message: "You don't have permission to do that." };
+    case 404: return { i18nKey: "errors.notFound", message: "We couldn't find what you were looking for." };
+    case 409: return { i18nKey: "errors.conflict", message: fallback || "That conflicts with existing data." };
+    case 413: return { i18nKey: "errors.tooLarge", message: "The file is too large. Please upload a smaller one." };
+    case 422: return { i18nKey: "errors.validation", message: fallback || "Some fields are invalid. Please review and try again." };
+    case 429: return { i18nKey: "errors.rateLimited", message: "Too many requests. Please slow down and try again in a moment." };
     case 500: case 502: case 503: case 504:
-      return "Our server is having trouble right now. Please try again shortly.";
-    default: return fallback || "Something went wrong. Please try again.";
+      return { i18nKey: "errors.server", message: "Our server is having trouble right now. Please try again shortly." };
+    default: return { i18nKey: "errors.generic", message: fallback || "Something went wrong. Please try again." };
   }
 }
 
@@ -112,6 +116,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     throw new ApiError({
       message: "Couldn't reach the server. Check your internet connection and try again.",
       isNetwork: true,
+      i18nKey: "errors.network",
       raw: e,
     });
   }
@@ -129,9 +134,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       }
     }
     if (res.status === 401) api.setToken(null);
+    const friendly = friendlyFor(res.status, serverMsg);
     throw new ApiError({
       status: res.status,
-      message: friendlyFor(res.status, serverMsg),
+      message: friendly.message,
+      i18nKey: friendly.i18nKey,
       fieldErrors: extractFieldErrors(body),
       raw: body ?? text,
     });
