@@ -10,35 +10,51 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { Github, Linkedin, Mail, Twitter } from "lucide-react";
 import type { Settings } from "@/lib/types";
+import { useApiMutation } from "@/lib/use-api";
+import { FieldError } from "@/components/ApiState";
 
 const Schema = z.object({
-  name: z.string().trim().min(1).max(60),
-  email: z.string().trim().email().max(255),
-  message: z.string().trim().min(1).max(2000),
+  name: z.string().trim().min(1, "Please enter your name.").max(60, "Name is too long."),
+  email: z.string().trim().email("Please enter a valid email address.").max(255),
+  message: z.string().trim().min(1, "Please write a message.").max(2000, "Message is too long."),
 });
 
 export function ContactSection({ settings }: { settings: Settings }) {
   const { t } = useI18n();
   const [data, setData] = useState({ name: "", email: "", message: "" });
-  const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const send = useApiMutation(
+    (payload: { name: string; email: string; message: string }) => messagesApi.send(payload),
+    {
+      silent: true,
+      onSuccess: () => {
+        toast.success(t("contact.success"));
+        setData({ name: "", email: "", message: "" });
+        setFieldErrors({});
+      },
+      onError: (err) => {
+        setFieldErrors(err.fieldErrors);
+        toast.error(err.message);
+      },
+    },
+  );
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsed = Schema.safeParse(data);
     if (!parsed.success) {
+      const errs: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const path = issue.path.join(".");
+        if (!errs[path]) errs[path] = issue.message;
+      }
+      setFieldErrors(errs);
       toast.error(parsed.error.issues[0].message);
       return;
     }
-    setLoading(true);
-    try {
-      await messagesApi.send(parsed.data);
-      toast.success(t("contact.success"));
-      setData({ name: "", email: "", message: "" });
-    } catch {
-      toast.error(t("contact.error"));
-    } finally {
-      setLoading(false);
-    }
+    setFieldErrors({});
+    await send.mutate(parsed.data);
   };
 
   return (
@@ -89,36 +105,48 @@ export function ContactSection({ settings }: { settings: Settings }) {
           className="space-y-4 rounded-2xl border border-border bg-gradient-card p-6 shadow-elevated"
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              placeholder={t("contact.name")}
-              value={data.name}
-              onChange={(e) => setData({ ...data, name: e.target.value })}
-              required
-              maxLength={60}
-            />
-            <Input
-              type="email"
-              placeholder={t("contact.email")}
-              value={data.email}
-              onChange={(e) => setData({ ...data, email: e.target.value })}
-              required
-              maxLength={255}
-            />
+            <div>
+              <Input
+                placeholder={t("contact.name")}
+                value={data.name}
+                onChange={(e) => setData({ ...data, name: e.target.value })}
+                required
+                maxLength={60}
+                aria-invalid={!!fieldErrors.name}
+              />
+              <FieldError message={fieldErrors.name} />
+            </div>
+            <div>
+              <Input
+                type="email"
+                placeholder={t("contact.email")}
+                value={data.email}
+                onChange={(e) => setData({ ...data, email: e.target.value })}
+                required
+                maxLength={255}
+                aria-invalid={!!fieldErrors.email}
+              />
+              <FieldError message={fieldErrors.email} />
+            </div>
           </div>
-          <Textarea
-            placeholder={t("contact.message")}
-            rows={5}
-            value={data.message}
-            onChange={(e) => setData({ ...data, message: e.target.value })}
-            required
-            maxLength={2000}
-          />
+          <div>
+            <Textarea
+              placeholder={t("contact.message")}
+              rows={5}
+              value={data.message}
+              onChange={(e) => setData({ ...data, message: e.target.value })}
+              required
+              maxLength={2000}
+              aria-invalid={!!fieldErrors.message}
+            />
+            <FieldError message={fieldErrors.message} />
+          </div>
           <Button
             type="submit"
-            disabled={loading}
+            disabled={send.loading}
             className="w-full bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-90"
           >
-            {loading ? "..." : t("contact.send")}
+            {send.loading ? "Sending..." : t("contact.send")}
           </Button>
         </motion.form>
       </div>
