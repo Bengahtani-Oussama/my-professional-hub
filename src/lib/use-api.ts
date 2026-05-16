@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ApiError } from "./api";
+import { translateApiError } from "./i18n-runtime";
 
 function toApiError(e: unknown): ApiError {
   if (e instanceof ApiError) return e;
@@ -74,7 +75,7 @@ export function useApiMutation<TArgs extends unknown[], TResult>(
     } catch (e) {
       const err = toApiError(e);
       setError(err);
-      if (!optsRef.current.silent) toast.error(err.message);
+      if (!optsRef.current.silent) toast.error(translateApiError(err));
       optsRef.current.onError?.(err);
       return undefined;
     } finally {

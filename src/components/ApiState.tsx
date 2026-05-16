@@ -3,6 +3,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import type { ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useI18n, translateApiError } from "@/lib/i18n";
 
 /**
  * Render-prop wrapper that handles loading + error states for a query.
@@ -42,6 +43,7 @@ export function DefaultSkeleton({ rows = 3 }: { rows?: number }) {
 }
 
 export function ErrorPanel({ error, onRetry }: { error: ApiError; onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <div
       role="alert"
@@ -50,12 +52,12 @@ export function ErrorPanel({ error, onRetry }: { error: ApiError; onRetry?: () =
       <div className="flex items-start gap-3">
         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
         <div className="flex-1">
-          <p className="font-medium text-foreground">Couldn't load this section</p>
-          <p className="mt-1 text-muted-foreground">{error.message}</p>
+          <p className="font-medium text-foreground">{t("errors.title")}</p>
+          <p className="mt-1 text-muted-foreground">{translateApiError(error, t)}</p>
         </div>
         {onRetry && (
           <Button size="sm" variant="outline" onClick={onRetry} className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" /> Retry
+            <RefreshCw className="h-3.5 w-3.5" /> {t("errors.retry")}
           </Button>
         )}
       </div>
