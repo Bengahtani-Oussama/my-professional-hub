@@ -4,8 +4,8 @@ import { connectDB } from "./config/db.js";
 import User from "./models/User.js";
 import Settings from "./models/Settings.js";
 
-const email = (process.env.ADMIN_EMAIL || "admin@example.com").toLowerCase();
-const password = process.env.ADMIN_PASSWORD || "ChangeMe123!";
+const email = (process.env.ADMIN_EMAIL || "oussamabengahtani@gmail.com").toLowerCase();
+const password = process.env.ADMIN_PASSWORD || "MyPortfolio?!#@4691";
 const name = process.env.ADMIN_NAME || "Admin";
 
 await connectDB(process.env.MONGODB_URI);
