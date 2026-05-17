@@ -3,7 +3,7 @@
  * translate strings without holding a React context. The active translator
  * is registered by `I18nProvider` on mount / locale change.
  */
-import type { ApiError } from "./api";
+import type { ApiError, FieldErrorInfo } from "./api";
 
 type Translator = (key: string) => string;
 
@@ -31,4 +31,26 @@ export function translateApiError(
   const translated = t(key);
   // If the translator returned the key itself, it had no entry — fall back.
   return translated === key ? error.message : translated;
+}
+
+function interpolate(template: string, params?: Record<string, string | number>): string {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (_, k) => (k in params ? String(params[k]) : `{${k}}`));
+}
+
+/**
+ * Resolve a per-field validation error in the active locale. Accepts either
+ * a `FieldErrorInfo` (preferred) or a plain string for back-compat.
+ * Falls back to the server-provided English message when the key is unknown.
+ */
+export function translateFieldError(
+  info: FieldErrorInfo | string | undefined,
+  t: Translator = currentTranslator,
+): string | undefined {
+  if (!info) return undefined;
+  if (typeof info === "string") return info;
+  if (!info.i18nKey) return info.message;
+  const translated = t(info.i18nKey);
+  if (translated === info.i18nKey) return info.message;
+  return interpolate(translated, info.params);
 }
