@@ -381,4 +381,40 @@ export const settingsApi = {
     setMock(STORAGE_KEYS.settings, next);
     return { visitorCount: next.visitorCount };
   },
+  async getVisitStats(days = 30): Promise<{ days: number; series: { date: string; visitors: number }[] }> {
+    if (api.hasBackend()) {
+      try {
+        return await request<{ days: number; series: { date: string; visitors: number }[] }>(
+          `/api/settings/visits/stats?days=${days}`,
+        );
+      } catch { /* fall through to mock */ }
+    }
+    // Mock: synthesise a plausible-looking series from localStorage so the
+    // chart still renders something deterministic between reloads.
+    const KEY = "mock_visit_stats_v1";
+    let cached: { days: number; series: { date: string; visitors: number }[] } | null = null;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (raw) cached = JSON.parse(raw);
+      } catch { /* ignore */ }
+    }
+    if (cached && cached.days === days) return cached;
+    const series: { date: string; visitors: number }[] = [];
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(today.getUTCDate() - i);
+      series.push({
+        date: d.toISOString().slice(0, 10),
+        visitors: Math.round(20 + Math.random() * 80),
+      });
+    }
+    const out = { days, series };
+    if (typeof window !== "undefined") {
+      try { localStorage.setItem(KEY, JSON.stringify(out)); } catch { /* ignore */ }
+    }
+    return out;
+  },
 };
