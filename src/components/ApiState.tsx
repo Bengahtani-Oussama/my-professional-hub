@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import type { ApiError } from "@/lib/api";
+import type { ApiError, FieldErrorInfo } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useI18n, translateApiError } from "@/lib/i18n";
+import { useI18n, translateApiError, translateFieldError } from "@/lib/i18n";
 
 /**
  * Render-prop wrapper that handles loading + error states for a query.
@@ -65,8 +65,20 @@ export function ErrorPanel({ error, onRetry }: { error: ApiError; onRetry?: () =
   );
 }
 
-/** Inline field error text — pair with form inputs. */
-export function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-destructive">{message}</p>;
+/**
+ * Inline field error text — pair with form inputs.
+ * Accepts either a translated `message` string, a `FieldErrorInfo` from
+ * an `ApiError.fieldErrors` map, or the raw `error` prop.
+ */
+export function FieldError({
+  error,
+  message,
+}: {
+  error?: FieldErrorInfo | string;
+  message?: string;
+}) {
+  const { t } = useI18n();
+  const text = message ?? translateFieldError(error, t);
+  if (!text) return null;
+  return <p className="mt-1 text-xs text-destructive">{text}</p>;
 }
