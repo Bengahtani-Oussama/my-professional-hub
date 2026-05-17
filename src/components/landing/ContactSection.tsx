@@ -5,7 +5,7 @@ import { useI18n, translateApiError } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { messagesApi } from "@/lib/api";
+import { messagesApi, type FieldErrors } from "@/lib/api";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Github, Linkedin, Mail, Twitter } from "lucide-react";
@@ -22,7 +22,7 @@ const Schema = z.object({
 export function ContactSection({ settings }: { settings: Settings }) {
   const { t } = useI18n();
   const [data, setData] = useState({ name: "", email: "", message: "" });
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   const send = useApiMutation(
     (payload: { name: string; email: string; message: string }) => messagesApi.send(payload),
@@ -44,13 +44,27 @@ export function ContactSection({ settings }: { settings: Settings }) {
     e.preventDefault();
     const parsed = Schema.safeParse(data);
     if (!parsed.success) {
-      const errs: Record<string, string> = {};
+      const errs: FieldErrors = {};
       for (const issue of parsed.error.issues) {
         const path = issue.path.join(".");
-        if (!errs[path]) errs[path] = issue.message;
+        if (errs[path]) continue;
+        // Map common zod issue codes onto our i18n keys
+        let i18nKey = "errors.field.invalid";
+        let params: Record<string, string | number> | undefined;
+        if (issue.code === "too_small") {
+          const min = (issue as { minimum?: number }).minimum;
+          i18nKey = min === 1 || min === 0 ? "errors.field.required" : "errors.field.tooShort";
+          if (min != null && i18nKey === "errors.field.tooShort") params = { min };
+        } else if (issue.code === "too_big") {
+          const max = (issue as { maximum?: number }).maximum;
+          i18nKey = "errors.field.tooLong";
+          if (max != null) params = { max };
+        } else if (issue.code === "invalid_string" && (issue as { validation?: string }).validation === "email") {
+          i18nKey = "errors.field.email";
+        }
+        errs[path] = { message: issue.message, i18nKey, params };
       }
       setFieldErrors(errs);
-      toast.error(parsed.error.issues[0].message);
       return;
     }
     setFieldErrors({});
@@ -114,7 +128,7 @@ export function ContactSection({ settings }: { settings: Settings }) {
                 maxLength={60}
                 aria-invalid={!!fieldErrors.name}
               />
-              <FieldError message={fieldErrors.name} />
+              <FieldError error={fieldErrors.name} />
             </div>
             <div>
               <Input
@@ -126,7 +140,7 @@ export function ContactSection({ settings }: { settings: Settings }) {
                 maxLength={255}
                 aria-invalid={!!fieldErrors.email}
               />
-              <FieldError message={fieldErrors.email} />
+              <FieldError error={fieldErrors.email} />
             </div>
           </div>
           <div>
@@ -139,7 +153,7 @@ export function ContactSection({ settings }: { settings: Settings }) {
               maxLength={2000}
               aria-invalid={!!fieldErrors.message}
             />
-            <FieldError message={fieldErrors.message} />
+            <FieldError error={fieldErrors.message} />
           </div>
           <Button
             type="submit"
