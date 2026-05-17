@@ -4,6 +4,7 @@ import {
   experienceApi, projectsApi, messagesApi, settingsApi,
 } from "@/lib/api";
 import { Briefcase, FolderKanban, Mail, Eye, TrendingUp } from "lucide-react";
+import { useState } from "react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -17,14 +18,16 @@ export const Route = createFileRoute("/admin/")({
 
 function Dashboard() {
   const { t } = useI18n();
+  const [days, setDays] = useState<7 | 30 | 90>(30);
   const { data, loading, error, refetch } = useApiQuery(
     async () => {
-      const [experience, projects, messages, settings] = await Promise.all([
+      const [experience, projects, messages, settings, visits] = await Promise.all([
         experienceApi.list(), projectsApi.list(), messagesApi.list(), settingsApi.get(),
+        settingsApi.getVisitStats(days),
       ]);
-      return { experience, projects, messages, settings };
+      return { experience, projects, messages, settings, visits };
     },
-    [],
+    [days],
   );
 
   if (loading && !data) {
@@ -45,7 +48,7 @@ function Dashboard() {
   }
   if (error && !data) return <ErrorPanel error={error} onRetry={refetch} />;
   if (!data) return null;
-  const { experience, projects, messages, settings } = data;
+  const { experience, projects, messages, settings, visits } = data;
 
   const current = experience.find((e) => e.current);
   const stats = [
@@ -55,11 +58,16 @@ function Dashboard() {
     { label: t("admin.totalMessages"), value: messages.length, icon: Mail, hint: `${messages.filter((m) => m.status === "unread").length} unread` },
   ];
 
-  // mock chart data
-  const chartData = Array.from({ length: 12 }, (_, i) => ({
-    name: ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][i],
-    visitors: Math.round(50 + Math.random() * 200 + i * 10),
-  }));
+  // Real visitor time series — pre-densified by the API so every day in the
+  // window is represented (zero-fill included) for a continuous line.
+  const chartData = visits.series.map((p) => {
+    const d = new Date(p.date + "T00:00:00Z");
+    const label = days <= 7
+      ? d.toLocaleDateString(undefined, { weekday: "short" })
+      : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return { name: label, date: p.date, visitors: p.visitors };
+  });
+  const windowTotal = chartData.reduce((sum, p) => sum + p.visitors, 0);
 
   return (
     <div className="space-y-6">
@@ -86,11 +94,34 @@ function Dashboard() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-gradient-card p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Visitors over time</h2>
-            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4 text-primary-glow" />
-              {settings?.visitorCount ?? 0} total
-            </span>
+            <div>
+              <h2 className="font-semibold">Visitors over time</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {windowTotal} in the last {days} days
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="inline-flex rounded-lg border border-border bg-card/60 p-0.5 text-xs">
+                {[7, 30, 90].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDays(d as 7 | 30 | 90)}
+                    className={`rounded-md px-2.5 py-1 transition-colors ${
+                      days === d
+                        ? "bg-primary/20 text-primary-glow"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {d}d
+                  </button>
+                ))}
+              </div>
+              <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4 text-primary-glow" />
+                {settings?.visitorCount ?? 0} total
+              </span>
+            </div>
           </div>
           <div className="h-64">
             <ResponsiveContainer>
@@ -102,8 +133,14 @@ function Dashboard() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.27 0.05 280)" vertical={false} />
-                <XAxis dataKey="name" stroke="oklch(0.68 0.04 270)" fontSize={12} />
-                <YAxis stroke="oklch(0.68 0.04 270)" fontSize={12} />
+                <XAxis
+                  dataKey="name"
+                  stroke="oklch(0.68 0.04 270)"
+                  fontSize={12}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
+                />
+                <YAxis stroke="oklch(0.68 0.04 270)" fontSize={12} allowDecimals={false} />
                 <Tooltip
                   contentStyle={{ background: "oklch(0.17 0.05 280)", border: "1px solid oklch(0.27 0.05 280)", borderRadius: 12 }}
                   labelStyle={{ color: "oklch(0.97 0.01 270)" }}
