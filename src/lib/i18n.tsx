@@ -7,7 +7,7 @@ import {
 } from "react";
 import type { Locale, LocalizedString, LocalizedArray } from "./types";
 import { setTranslator } from "./i18n-runtime";
-export { translateApiError } from "./i18n-runtime";
+export { translateApiError, translateFieldError } from "./i18n-runtime";
 
 type Dict = Record<string, string>;
 
@@ -81,6 +81,11 @@ const en: Dict = {
   "errors.generic": "Something went wrong. Please try again.",
   "errors.title": "Couldn't load this section",
   "errors.retry": "Retry",
+  "errors.field.required": "This field is required.",
+  "errors.field.email": "Please enter a valid email address.",
+  "errors.field.tooShort": "Must be at least {min} characters.",
+  "errors.field.tooLong": "Must be at most {max} characters.",
+  "errors.field.invalid": "This value is invalid.",
 };
 
 const fr: Dict = {
@@ -153,6 +158,11 @@ const fr: Dict = {
   "errors.generic": "Une erreur est survenue. Veuillez réessayer.",
   "errors.title": "Impossible de charger cette section",
   "errors.retry": "Réessayer",
+  "errors.field.required": "Ce champ est requis.",
+  "errors.field.email": "Veuillez saisir une adresse email valide.",
+  "errors.field.tooShort": "Doit contenir au moins {min} caractères.",
+  "errors.field.tooLong": "Doit contenir au plus {max} caractères.",
+  "errors.field.invalid": "Cette valeur est invalide.",
 };
 
 const ar: Dict = {
@@ -225,6 +235,11 @@ const ar: Dict = {
   "errors.generic": "حدث خطأ ما. يرجى المحاولة مجددًا.",
   "errors.title": "تعذّر تحميل هذا القسم",
   "errors.retry": "إعادة المحاولة",
+  "errors.field.required": "هذا الحقل مطلوب.",
+  "errors.field.email": "يرجى إدخال بريد إلكتروني صالح.",
+  "errors.field.tooShort": "يجب أن يحتوي على {min} أحرف على الأقل.",
+  "errors.field.tooLong": "يجب ألا يزيد عن {max} حرفًا.",
+  "errors.field.invalid": "هذه القيمة غير صالحة.",
 };
 
 const dicts: Record<Locale, Dict> = {
