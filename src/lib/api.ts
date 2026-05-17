@@ -25,20 +25,177 @@ export const api = {
   },
 };
 
+/* --------------------------- Typed API errors -------------------------- */
+
+export type FieldErrorParams = Record<string, string | number>;
+
+/**
+ * A single per-field validation error. `message` is the original English /
+ * server-provided text (safe fallback); `i18nKey` and `params` are used by
+ * `translateFieldError` to render a localized message.
+ */
+export interface FieldErrorInfo {
+  message: string;
+  i18nKey?: string;
+  params?: FieldErrorParams;
+}
+
+export type FieldErrors = Record<string, FieldErrorInfo>;
+
+/**
+ * Normalised error thrown by every request. `.message` is always a
+ * human-friendly sentence safe to show in a toast or alert. `.fieldErrors`
+ * is populated when the backend returned per-field validation errors
+ * (zod / mongoose style), keyed by field path.
+ */
+export class ApiError extends Error {
+  status: number;
+  fieldErrors: FieldErrors;
+  isNetwork: boolean;
+  /** Translation key for the friendly message — pair with `translateApiError`. */
+  i18nKey: string;
+  raw?: unknown;
+  constructor(opts: {
+    message: string;
+    status?: number;
+    fieldErrors?: FieldErrors;
+    isNetwork?: boolean;
+    i18nKey?: string;
+    raw?: unknown;
+  }) {
+    super(opts.message);
+    this.name = "ApiError";
+    this.status = opts.status ?? 0;
+    this.fieldErrors = opts.fieldErrors ?? {};
+    this.isNetwork = Boolean(opts.isNetwork);
+    this.i18nKey = opts.i18nKey ?? "errors.generic";
+    this.raw = opts.raw;
+  }
+}
+
+function friendlyFor(status: number, fallback?: string): { message: string; i18nKey: string } {
+  switch (status) {
+    case 400: return { i18nKey: "errors.validation", message: fallback || "Some fields are invalid. Please review and try again." };
+    case 401: return { i18nKey: "errors.unauthorized", message: "Your session has expired. Please sign in again." };
+    case 403: return { i18nKey: "errors.forbidden", message: "You don't have permission to do that." };
+    case 404: return { i18nKey: "errors.notFound", message: "We couldn't find what you were looking for." };
+    case 409: return { i18nKey: "errors.conflict", message: fallback || "That conflicts with existing data." };
+    case 413: return { i18nKey: "errors.tooLarge", message: "The file is too large. Please upload a smaller one." };
+    case 422: return { i18nKey: "errors.validation", message: fallback || "Some fields are invalid. Please review and try again." };
+    case 429: return { i18nKey: "errors.rateLimited", message: "Too many requests. Please slow down and try again in a moment." };
+    case 500: case 502: case 503: case 504:
+      return { i18nKey: "errors.server", message: "Our server is having trouble right now. Please try again shortly." };
+    default: return { i18nKey: "errors.generic", message: fallback || "Something went wrong. Please try again." };
+  }
+}
+
+/** Map a Zod issue (or Mongoose validator error) to a translation key. */
+function inferFieldKey(e: Record<string, unknown>): { i18nKey?: string; params?: FieldErrorParams } {
+  const code = (e.code as string | undefined) ?? (e.kind as string | undefined);
+  const validation = e.validation as string | undefined;
+  const type = e.type as string | undefined;
+  const minimum = e.minimum as number | undefined;
+  const maximum = e.maximum as number | undefined;
+
+  // Email validator (zod `invalid_string` + validation:"email", or mongoose custom)
+  if (validation === "email" || code === "invalid_email") {
+    return { i18nKey: "errors.field.email" };
+  }
+  // Required / empty
+  if (
+    code === "required" ||
+    (code === "too_small" && (type === "string" || type === "array") && (minimum === 1 || minimum === 0))
+  ) {
+    return { i18nKey: "errors.field.required" };
+  }
+  if (code === "too_small" || code === "minlength" || code === "min") {
+    return { i18nKey: "errors.field.tooShort", params: minimum != null ? { min: minimum } : undefined };
+  }
+  if (code === "too_big" || code === "maxlength" || code === "max") {
+    return { i18nKey: "errors.field.tooLong", params: maximum != null ? { max: maximum } : undefined };
+  }
+  if (code === "invalid_type" || code === "invalid_string" || code === "invalid_enum_value") {
+    return { i18nKey: "errors.field.invalid" };
+  }
+  return { i18nKey: "errors.field.invalid" };
+}
+
+function extractFieldErrors(body: unknown): FieldErrors {
+  if (!body || typeof body !== "object") return {};
+  const out: FieldErrors = {};
+  const b = body as Record<string, unknown>;
+  // { errors: [{ path: ["email"], message: "..." }, ...] }  — zod-style
+  if (Array.isArray(b.errors)) {
+    for (const e of b.errors as Array<Record<string, unknown>>) {
+      const path = Array.isArray(e.path) ? (e.path as Array<string | number>).join(".") : (e.path as string | undefined) ?? (e.field as string | undefined);
+      const msg = (e.message as string | undefined) ?? "Invalid value";
+      if (path && !out[path]) {
+        const { i18nKey, params } = inferFieldKey(e);
+        out[path] = { message: msg, i18nKey, params };
+      }
+    }
+  }
+  // { errors: { email: "...", name: "..." } }
+  if (b.errors && !Array.isArray(b.errors) && typeof b.errors === "object") {
+    for (const [k, v] of Object.entries(b.errors as Record<string, unknown>)) {
+      if (typeof v === "string") {
+        out[k] = { message: v, i18nKey: "errors.field.invalid" };
+      } else if (v && typeof v === "object") {
+        const obj = v as Record<string, unknown>;
+        const msg = "message" in obj ? String(obj.message) : "Invalid value";
+        const { i18nKey, params } = inferFieldKey(obj);
+        out[k] = { message: msg, i18nKey, params };
+      }
+    }
+  }
+  return out;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = api.getToken();
-  const res = await fetch(`${BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+  } catch (e) {
+    throw new ApiError({
+      message: "Couldn't reach the server. Check your internet connection and try again.",
+      isNetwork: true,
+      i18nKey: "errors.network",
+      raw: e,
+    });
   }
+  if (!res.ok) {
+    let body: unknown = null;
+    let serverMsg: string | undefined;
+    const text = await res.text();
+    if (text) {
+      try {
+        body = JSON.parse(text);
+        const b = body as Record<string, unknown>;
+        serverMsg = (b.message as string | undefined) ?? (b.error as string | undefined);
+      } catch {
+        serverMsg = text;
+      }
+    }
+    if (res.status === 401) api.setToken(null);
+    const friendly = friendlyFor(res.status, serverMsg);
+    throw new ApiError({
+      status: res.status,
+      message: friendly.message,
+      i18nKey: friendly.i18nKey,
+      fieldErrors: extractFieldErrors(body),
+      raw: body ?? text,
+    });
+  }
+  // 204 No Content
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 

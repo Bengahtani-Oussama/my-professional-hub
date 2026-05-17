@@ -1,14 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   experienceApi, projectsApi, messagesApi, settingsApi,
 } from "@/lib/api";
-import type { Experience, Project, Message, Settings } from "@/lib/types";
 import { Briefcase, FolderKanban, Mail, Eye, TrendingUp } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
+import { useApiQuery } from "@/lib/use-api";
+import { ErrorPanel } from "@/components/ApiState";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/admin/")({
   component: Dashboard,
@@ -16,16 +17,35 @@ export const Route = createFileRoute("/admin/")({
 
 function Dashboard() {
   const { t } = useI18n();
-  const [experience, setExperience] = useState<Experience[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [settings, setSettings] = useState<Settings | null>(null);
+  const { data, loading, error, refetch } = useApiQuery(
+    async () => {
+      const [experience, projects, messages, settings] = await Promise.all([
+        experienceApi.list(), projectsApi.list(), messagesApi.list(), settingsApi.get(),
+      ]);
+      return { experience, projects, messages, settings };
+    },
+    [],
+  );
 
-  useEffect(() => {
-    Promise.all([
-      experienceApi.list(), projectsApi.list(), messagesApi.list(), settingsApi.get(),
-    ]).then(([e, p, m, s]) => { setExperience(e); setProjects(p); setMessages(m); setSettings(s); });
-  }, []);
+  if (loading && !data) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
+          <Skeleton className="h-80 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+  if (error && !data) return <ErrorPanel error={error} onRetry={refetch} />;
+  if (!data) return null;
+  const { experience, projects, messages, settings } = data;
 
   const current = experience.find((e) => e.current);
   const stats = [

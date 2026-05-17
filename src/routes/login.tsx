@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
+import { useI18n, translateApiError } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LangSwitcher } from "@/components/LangSwitcher";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -31,8 +31,10 @@ function LoginPage() {
     try {
       await login(email, password);
       navigate({ to: "/admin" });
-    } catch {
-      toast.error(t("login.failed"));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) toast.error(t("login.failed"));
+      else if (e instanceof ApiError) toast.error(translateApiError(e, t));
+      else toast.error(e instanceof Error ? e.message : t("login.failed"));
     } finally {
       setLoading(false);
     }
