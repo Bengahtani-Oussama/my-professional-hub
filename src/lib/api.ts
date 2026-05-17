@@ -27,7 +27,20 @@ export const api = {
 
 /* --------------------------- Typed API errors -------------------------- */
 
-export type FieldErrors = Record<string, string>;
+export type FieldErrorParams = Record<string, string | number>;
+
+/**
+ * A single per-field validation error. `message` is the original English /
+ * server-provided text (safe fallback); `i18nKey` and `params` are used by
+ * `translateFieldError` to render a localized message.
+ */
+export interface FieldErrorInfo {
+  message: string;
+  i18nKey?: string;
+  params?: FieldErrorParams;
+}
+
+export type FieldErrors = Record<string, FieldErrorInfo>;
 
 /**
  * Normalised error thrown by every request. `.message` is always a
@@ -76,6 +89,37 @@ function friendlyFor(status: number, fallback?: string): { message: string; i18n
   }
 }
 
+/** Map a Zod issue (or Mongoose validator error) to a translation key. */
+function inferFieldKey(e: Record<string, unknown>): { i18nKey?: string; params?: FieldErrorParams } {
+  const code = (e.code as string | undefined) ?? (e.kind as string | undefined);
+  const validation = e.validation as string | undefined;
+  const type = e.type as string | undefined;
+  const minimum = e.minimum as number | undefined;
+  const maximum = e.maximum as number | undefined;
+
+  // Email validator (zod `invalid_string` + validation:"email", or mongoose custom)
+  if (validation === "email" || code === "invalid_email") {
+    return { i18nKey: "errors.field.email" };
+  }
+  // Required / empty
+  if (
+    code === "required" ||
+    (code === "too_small" && (type === "string" || type === "array") && (minimum === 1 || minimum === 0))
+  ) {
+    return { i18nKey: "errors.field.required" };
+  }
+  if (code === "too_small" || code === "minlength" || code === "min") {
+    return { i18nKey: "errors.field.tooShort", params: minimum != null ? { min: minimum } : undefined };
+  }
+  if (code === "too_big" || code === "maxlength" || code === "max") {
+    return { i18nKey: "errors.field.tooLong", params: maximum != null ? { max: maximum } : undefined };
+  }
+  if (code === "invalid_type" || code === "invalid_string" || code === "invalid_enum_value") {
+    return { i18nKey: "errors.field.invalid" };
+  }
+  return { i18nKey: "errors.field.invalid" };
+}
+
 function extractFieldErrors(body: unknown): FieldErrors {
   if (!body || typeof body !== "object") return {};
   const out: FieldErrors = {};
@@ -85,15 +129,22 @@ function extractFieldErrors(body: unknown): FieldErrors {
     for (const e of b.errors as Array<Record<string, unknown>>) {
       const path = Array.isArray(e.path) ? (e.path as Array<string | number>).join(".") : (e.path as string | undefined) ?? (e.field as string | undefined);
       const msg = (e.message as string | undefined) ?? "Invalid value";
-      if (path && !out[path]) out[path] = msg;
+      if (path && !out[path]) {
+        const { i18nKey, params } = inferFieldKey(e);
+        out[path] = { message: msg, i18nKey, params };
+      }
     }
   }
   // { errors: { email: "...", name: "..." } }
   if (b.errors && !Array.isArray(b.errors) && typeof b.errors === "object") {
     for (const [k, v] of Object.entries(b.errors as Record<string, unknown>)) {
-      if (typeof v === "string") out[k] = v;
-      else if (v && typeof v === "object" && "message" in (v as object)) {
-        out[k] = String((v as { message: unknown }).message);
+      if (typeof v === "string") {
+        out[k] = { message: v, i18nKey: "errors.field.invalid" };
+      } else if (v && typeof v === "object") {
+        const obj = v as Record<string, unknown>;
+        const msg = "message" in obj ? String(obj.message) : "Invalid value";
+        const { i18nKey, params } = inferFieldKey(obj);
+        out[k] = { message: msg, i18nKey, params };
       }
     }
   }
