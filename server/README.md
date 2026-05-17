@@ -46,4 +46,5 @@ deployed API URL (e.g. `https://portfolio-api.onrender.com`).
 | GET    | /api/settings              | public |
 | PUT    | /api/settings              | bearer |
 | POST   | /api/settings/visit        | public |
+| GET    | /api/settings/visits/stats?days=30 | public |
 | GET    | /health                    | public |
