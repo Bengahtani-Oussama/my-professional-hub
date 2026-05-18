@@ -5,6 +5,7 @@ import { Nav } from "./Nav";
 import { Footer } from "./Footer";
 import { useI18n } from "@/lib/i18n";
 import type { Experience } from "@/lib/types";
+import { ImageCarousel } from "./ImageCarousel";
 
 export function DetailView({
   item,
@@ -134,21 +135,7 @@ export function DetailView({
               )}
               {item.images && item.images.length > 0 && (
                 <Block title={t("details.gallery")}>
-                  <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-                    {item.images.map((src, i) => (
-                      <div
-                        key={i}
-                        className="aspect-video overflow-hidden rounded-lg border border-border bg-secondary"
-                      >
-                        <img
-                          src={src}
-                          alt={`${pickLocalized(item.title)} — ${i + 1}`}
-                          className="h-full w-full object-cover transition-transform duration-500 hover:scale-105"
-                          loading="lazy"
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  <ImageCarousel images={item.images} alt={pickLocalized(item.title)} />
                 </Block>
               )}
             </div>
