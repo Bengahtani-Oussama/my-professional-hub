@@ -13,6 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as ProjectsIdRouteImport } from './routes/projects.$id'
+import { Route as ExperienceIdRouteImport } from './routes/experience.$id'
 import { Route as AdminSkillsRouteImport } from './routes/admin.skills'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminProjectsRouteImport } from './routes/admin.projects'
@@ -39,6 +41,16 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const ProjectsIdRoute = ProjectsIdRouteImport.update({
+  id: '/projects/$id',
+  path: '/projects/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExperienceIdRoute = ExperienceIdRouteImport.update({
+  id: '/experience/$id',
+  path: '/experience/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminSkillsRoute = AdminSkillsRouteImport.update({
   id: '/skills',
@@ -81,6 +93,8 @@ export interface FileRoutesByFullPath {
   '/admin/projects': typeof AdminProjectsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/skills': typeof AdminSkillsRoute
+  '/experience/$id': typeof ExperienceIdRoute
+  '/projects/$id': typeof ProjectsIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +106,8 @@ export interface FileRoutesByTo {
   '/admin/projects': typeof AdminProjectsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/skills': typeof AdminSkillsRoute
+  '/experience/$id': typeof ExperienceIdRoute
+  '/projects/$id': typeof ProjectsIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -105,6 +121,8 @@ export interface FileRoutesById {
   '/admin/projects': typeof AdminProjectsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/skills': typeof AdminSkillsRoute
+  '/experience/$id': typeof ExperienceIdRoute
+  '/projects/$id': typeof ProjectsIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +137,8 @@ export interface FileRouteTypes {
     | '/admin/projects'
     | '/admin/settings'
     | '/admin/skills'
+    | '/experience/$id'
+    | '/projects/$id'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +150,8 @@ export interface FileRouteTypes {
     | '/admin/projects'
     | '/admin/settings'
     | '/admin/skills'
+    | '/experience/$id'
+    | '/projects/$id'
     | '/admin'
   id:
     | '__root__'
@@ -142,6 +164,8 @@ export interface FileRouteTypes {
     | '/admin/projects'
     | '/admin/settings'
     | '/admin/skills'
+    | '/experience/$id'
+    | '/projects/$id'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -149,6 +173,8 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
+  ExperienceIdRoute: typeof ExperienceIdRoute
+  ProjectsIdRoute: typeof ProjectsIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -180,6 +206,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/projects/$id': {
+      id: '/projects/$id'
+      path: '/projects/$id'
+      fullPath: '/projects/$id'
+      preLoaderRoute: typeof ProjectsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experience/$id': {
+      id: '/experience/$id'
+      path: '/experience/$id'
+      fullPath: '/experience/$id'
+      preLoaderRoute: typeof ExperienceIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/skills': {
       id: '/admin/skills'
@@ -252,7 +292,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
+  ExperienceIdRoute: ExperienceIdRoute,
+  ProjectsIdRoute: ProjectsIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
