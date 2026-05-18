@@ -278,6 +278,14 @@ function crud<T extends { _id: string }>(path: string, key: string, seed: T[]) {
       }
       return getMock(key, seed);
     },
+    async get(_id: string): Promise<T | null> {
+      if (api.hasBackend()) {
+        try { return await request<T>(`${path}/${_id}`); }
+        catch { /* fall through to mock */ }
+      }
+      const list = getMock(key, seed);
+      return list.find((x) => x._id === _id) ?? null;
+    },
     async create(data: Omit<T, "_id">): Promise<T> {
       if (api.hasBackend()) {
         return request<T>(path, { method: "POST", body: JSON.stringify(data) });

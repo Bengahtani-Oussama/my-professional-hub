@@ -11,6 +11,13 @@ export function crudRouter(Model, { listSort } = {}) {
       res.json(docs);
     } catch (e) { next(e); }
   });
+  r.get("/:id", async (req, res, next) => {
+    try {
+      const doc = await Model.findById(req.params.id).lean();
+      if (!doc) return res.status(404).json({ error: "Not found" });
+      res.json(doc);
+    } catch (e) { next(e); }
+  });
   r.post("/", requireAuth, async (req, res, next) => {
     try { res.status(201).json(await Model.create(req.body)); } catch (e) { next(e); }
   });
