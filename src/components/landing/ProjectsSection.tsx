@@ -2,7 +2,8 @@ import { motion } from "framer-motion";
 import { Section } from "./Section";
 import { useI18n } from "@/lib/i18n";
 import type { Project } from "@/lib/types";
-import { ExternalLink, Github } from "lucide-react";
+import { ArrowRight, ExternalLink, Github } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function ProjectsSection({ items }: { items: Project[] }) {
   const { t, pickLocalized } = useI18n();
@@ -45,6 +46,14 @@ export function ProjectsSection({ items }: { items: Project[] }) {
                 </div>
               )}
               <div className="mt-5 flex items-center gap-3">
+                <Link
+                  to="/projects/$id"
+                  params={{ id: p._id }}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary-glow"
+                >
+                  {t("common.viewDetails")}
+                  <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
                 {p.liveUrl && (
                   <a
                     href={p.liveUrl}

@@ -2,7 +2,8 @@ import { motion } from "framer-motion";
 import { Section } from "./Section";
 import { useI18n } from "@/lib/i18n";
 import type { Experience } from "@/lib/types";
-import { Briefcase } from "lucide-react";
+import { ArrowRight, Briefcase } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export function ExperienceSection({ items }: { items: Experience[] }) {
   const { t, pickLocalized } = useI18n();
@@ -50,6 +51,14 @@ export function ExperienceSection({ items }: { items: Experience[] }) {
                       ))}
                     </div>
                   )}
+                  <Link
+                    to="/experience/$id"
+                    params={{ id: exp._id }}
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-primary-glow hover:underline"
+                  >
+                    {t("common.viewDetails")}
+                    <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" />
+                  </Link>
                 </div>
               </div>
               <div className="hidden md:block" />
