@@ -93,13 +93,13 @@ export function DetailView({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="mt-10 overflow-hidden rounded-2xl border border-border bg-secondary"
+              className="mt-10"
             >
-              <img
-                src={item.imageUrl}
-                alt={pickLocalized(item.title)}
-                className="aspect-video w-full object-cover"
-              />
+              {item.images && item.images.length > 0 && (
+                <Block title={t("details.gallery")}>
+                  <ImageCarousel images={item.images} alt={pickLocalized(item.title)} />
+                </Block>
+              )}
             </motion.div>
           )}
 
@@ -131,11 +131,6 @@ export function DetailView({
                   {archDesc && (
                     <p className="mt-2 leading-relaxed text-muted-foreground">{archDesc}</p>
                   )}
-                </Block>
-              )}
-              {item.images && item.images.length > 0 && (
-                <Block title={t("details.gallery")}>
-                  <ImageCarousel images={item.images} alt={pickLocalized(item.title)} />
                 </Block>
               )}
             </div>
