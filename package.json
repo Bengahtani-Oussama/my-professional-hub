@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "dev:server": "npm --prefix server run dev",
+    "dev:all": "concurrently -n web,api -c cyan,magenta \"npm run dev\" \"npm run dev:server\"",
+    "start:all": "concurrently -n web,api -c cyan,magenta \"npm run dev\" \"npm --prefix server start\"",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
