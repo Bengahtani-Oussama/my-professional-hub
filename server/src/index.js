@@ -24,6 +24,7 @@ app.use(morgan("dev"));
 const origins = (process.env.CORS_ORIGINS || "")
   .split(",").map((s) => s.trim()).filter(Boolean);
   console.log('origins :>> ', origins);
+  console.log('origins V2 :>> ', process.env.CORS_ORIGINS);
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin || origins.length === 0 || origins.includes(origin)) return cb(null, true);
