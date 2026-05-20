@@ -21,16 +21,9 @@ app.use(express.json({ limit: "1mb" }));
 app.use(morgan("dev"));
 
 // CORS
-const origins = (process.env.CORS_ORIGINS || "")
-  .split(",").map((s) => s.trim()).filter(Boolean);
-  console.log('origins :>> ', origins);
-  console.log('origins V2 :>> ', process.env.CORS_ORIGINS);
+const allowedOrigins = ['http://localhost:3000','https://bengahtani-oussama.vercel.app/','https://porfolio-gray-zeta.vercel.app/'];
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || origins.length === 0 || origins.includes(origin)) return cb(null, true);
-    return cb(new Error("CORS blocked: " + origin));
-  },
-  credentials: true,
+  origin: allowedOrigins
 }));
 
 // Rate limit (auth + write-heavy endpoints)
