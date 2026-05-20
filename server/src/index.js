@@ -23,7 +23,7 @@ app.use(morgan("dev"));
 // CORS
 const allowedOrigins = ['http://localhost:3000','https://bengahtani-oussama.vercel.app/','https://porfolio-gray-zeta.vercel.app/'];
 app.use(cors({
-  origin: allowedOrigins
+  origin: "https://porfolio-gray-zeta.vercel.app"
 }));
 
 // Rate limit (auth + write-heavy endpoints)
