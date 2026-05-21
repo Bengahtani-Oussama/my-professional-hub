@@ -17,6 +17,7 @@ export const LocalizedArray = {
 export const ExperienceLikeSchema = new mongoose.Schema({
   title: LocalizedString,
   description: LocalizedString,
+  location: LocalizedString,
   imageUrl: { type: String, default: "" },
   tags: { type: [String], default: [] },
   images: { type: [String], default: [] },

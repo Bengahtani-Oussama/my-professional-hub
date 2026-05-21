@@ -5,10 +5,13 @@ const SettingsSchema = new mongoose.Schema({
   siteTitle: LocalizedString,
   siteLogo: { type: String, default: "" },
   seoDescription: LocalizedString,
+  aboutMeTitle: LocalizedString,
+  aboutMeDescription: LocalizedString,
   resumeUrl: { type: String, default: "" },
   profileImage: { type: String, default: "" },
   email: { type: String, default: "" },
   phone: { type: String, default: "" },
+  availableToWork: { type: Boolean, default: false },
   location: LocalizedString,
   socialLinks: {
     github: { type: String, default: "" },
